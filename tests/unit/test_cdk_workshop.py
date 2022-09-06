@@ -8,7 +8,6 @@ from tutorial.hitcounter import HitCounter
 
 
 def test_dynamo_db_table_created():
-
     stack = Stack()
     hitcounter = HitCounter(
         stack, "HitCounterTest",
