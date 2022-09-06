@@ -2,11 +2,11 @@ from constructs import Construct
 from aws_cdk import (
     Duration,
     Stack,
-    aws_iam as iam,
-    aws_sqs as sqs,
-    aws_sns as sns,
-    aws_sns_subscriptions as subs,
+    aws_lambda,
+    aws_apigateway as apigw,
 )
+from cdk_dynamo_table_view import TableViewer
+from tutorial.hitcounter import HitCounter
 
 
 class TutorialStack(Stack):
@@ -14,13 +14,32 @@ class TutorialStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        queue = sqs.Queue(
-            self, "TutorialQueue",
-            visibility_timeout=Duration.seconds(300),
+        my_lambda = aws_lambda.Function(
+            self,
+            "HelloHandler",
+            runtime=aws_lambda.Runtime.PYTHON_3_7,
+            code=aws_lambda.Code.from_asset("lambda"),
+            handler="hello.handler"
         )
 
-        topic = sns.Topic(
-            self, "TutorialTopic"
+        lambda_with_hitcounter = HitCounter(
+            self,
+            "lambda_with_hitcounter",
+            downstream=my_lambda,
         )
 
-        topic.add_subscription(subs.SqsSubscription(queue))
+        api = apigw.LambdaRestApi(
+            self,
+            "Endpoint",
+            handler=lambda_with_hitcounter._handler,
+        )
+
+        table_viewer = TableViewer(
+            self,
+            "table_viewer",
+            title="Hello Hits",
+            table=lambda_with_hitcounter.table,
+            sort_by="-hits"
+
+        )
+
